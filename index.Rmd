@@ -1,0 +1,666 @@
+---
+pagetitle: Testing hypotheses about a regression coefficient
+output: 
+  revealjs::revealjs_presentation:
+    incremental: false
+    theme: solarized
+    self_contained: false
+    # reveal_plugins: ["menu","notes","chalkboard"]
+    reveal_plugins: ["menu"]
+    highlight: pygments
+    center: true
+    transition: none
+    background_transition: none 
+    reveal_options:
+      # chalkboard:
+      #   theme: whiteboard
+      #   toggleNotesButton: true
+      #   toggleChalkboardButton: true
+      menu:
+        numbers: true
+      slideNumber: true
+      previewLinks: false
+    fig_caption: true
+    pandoc_args:
+    - --indented-code-classes
+    - lineNumbers
+    css: mystyle.css
+    
+--- 
+
+<section>
+
+<h1>Testing hypotheses about a regression coefficient</h1>
+
+Based on Stock and Watson, ch. 5
+
+<br>
+
+<h2>[Jesper Bagger](mailto:jesper.bagger@rhul.ac.uk)</h2>
+
+<h3>EC2208 | Royal Holloway | 2021/22</h3>
+
+</section>
+
+
+```{r results='asis', echo=FALSE, include=FALSE}
+library(AER) # include Applied Econometrics with R library
+data(CASchools) # Load CASchools data
+# Generate a couple of useful variables
+CASchools$STR <- CASchools$students/CASchools$teachers  # Student-teacher ratio
+CASchools$Score <- (CASchools$read + CASchools$math)/2  # Student test score
+data(CPSSWEducation) # Load CPSSWEducation data
+```
+
+# The sampling distribution of the OLS estimator
+
+## The simple linear regression model
+
+- $(Score_i,STR_i; i=1,2,\ldots,n) \,$ is i.i.d. sample
+
+- Population regression model
+
+  $$Score_i = \beta_0 + \beta_1 STR_i + u_i; \quad i = 1,\ldots,n$$
+
+- Assumptions ensuring consistent OLS estimation of $\beta_1$ satisfied: $\mathrm{Cov}(STR_i,u_i) = \mathrm{E}(STR_i u_i) = 0$
+
+- Large-sample approximation to sampling distribution 
+
+  $$\hat{\beta}_1 \overset{\text{approx}}{\sim} \mathcal{N}\left(\beta_1,\sigma^2_{\hat{\beta}_1} \right)$$
+
+- Assume we have estimator $\hat{\sigma}^2_{\hat{\beta}_1}$ of $\sigma^2_{\hat{\beta}_1}$
+
+# Hypothesis testing
+
+## Hypothesis testing
+
+$$Score_i = \beta_0 + \beta_1 STR_i + u_i; \quad i = 1,\ldots,n$$
+
+- Hypothesize unknown parameter $\beta_1$ equals value $\beta_{1,0}$ 
+
+  $$H_0: \, \beta_1 = \beta_{1,0}; \quad H_1: \, \beta_1 \neq \beta_{1,0}$$
+
+  E.g. $H_0: \beta_1 = 0$: no relationship b/w class size and scores
+
+- We can consistently estimate $\beta_1$ by the OLS estimator $\hat{\beta}_1$; but, how can we reject (or not) $H_0: \, \beta_1 = \beta_{1,0}$? 
+
+- The OLS estimator $\hat{\beta}_1$ is a random variable, so $\hat{\beta}_1 \neq \beta_1$; hence, $\hat{\beta}_1 \neq \beta_{1,0}$ even if $\beta_1 = \beta_{1,0}$
+
+## Is $\beta_1=0$?
+
+$$Score_i = \beta_0 + \beta_1 STR_i + u_i; \quad i = 1,\ldots,n$$
+
+```{r echo=FALSE, error=FALSE, warning=FALSE}
+lm1 <- lm(Score ~ STR, data = CASchools) # Fitted model in lm1
+summary(lm1)
+```
+
+## The $t$-statistic
+ 
+- When $H_0: \beta_1 = \beta_{1,0}$ is **true**, $\hat{\beta}_1 \overset{\text{approx}}{\sim} \mathcal{N}(\beta_{1,0},\hat{\sigma}^2_{\hat{\beta}_1})$. 
+
+- The $t$-statistic is the standardized OLS estimator,
+
+  $$t = \frac{\hat{\beta}_1-\beta_{1,0}}{\hat{\sigma}_{\hat{\beta}_1}} \overset{\text{approx}}{\sim} \mathcal{N}\left(0,1 \right)$$
+
+  where $\hat{\sigma}_{\hat{\beta}_1} = \sqrt{\hat{\sigma}_{\hat{\beta}_1}^2}$ is the standard error of $\hat{\beta}_1$
+
+<!-- - The $p$-value of the $t$-statistic is $p = 2\Phi\left( - | t | \right)$, where $\Phi(z)$ is the standard normal CDF -->
+
+## The $p$-value
+
+
+<div class="box">
+The $p$-value is the probability of observing a $t$-statistic that is at least as *adverse* to the null as the $t$-value actually computed using the sampled data.
+</div>
+
+## The $p$-value for $H_0:\, \beta_1 = 0$
+
+$$t = \frac{-2.28 - 0}{0.48} = -4.75$$
+
+```{r echo=FALSE, error=FALSE, warning=FALSE, out.width = "70%"}
+# Plot the standard normal on the support [-6,6]
+t <- seq(-6, 6, 0.01)
+par(mar = c(4.1,4.1,0.1,4.1))
+plot(x = t, 
+     y = dnorm(t, 0, 1), 
+     type = "l", 
+     col = "blue", 
+     lwd = 3, 
+     yaxs = "i",
+     ylab = "Density",
+     xaxt="n",
+     xlab = "t-value",
+     ylim = c(0, 0.45) )
+
+tact <- -4.75
+
+axis(1, at = c(0, -1.96, 1.96, -tact, tact))
+
+# Shade the critical regions using polygon():
+
+#critical region in left tail
+
+polygon(x = c(-6, seq(-6, -4.75, 0.01), -4.75),
+        y = c(0, dnorm(seq(-6, -4.75, 0.01)), 0),
+        col = 'red')
+
+# critical region in right tail
+
+polygon(x = c(4.75, seq(4.75, 6, 0.01), 6),
+        y = c(0, dnorm(seq(4.75, 6, 0.01)), 0),
+        col = 'red')
+
+# Add arrows and texts indicating critical regions and the p-value
+# arrows(-3.5, 0.2, -2.5, 0.02, length = 0.1)
+# arrows(3.5, 0.2, 2.5, 0.02, length = 0.1)
+
+arrows(-5, 0.16, -4.75, 0, length = 0.1)
+arrows(5, 0.16, 4.75, 0, length = 0.1)
+
+# text(-3.5, 0.22, 
+#      labels = expression("0.025"~"="~over(alpha, 2)),
+#      cex = 0.7)
+# text(3.5, 0.22, 
+#      labels = expression("0.025"~"="~over(alpha, 2)),
+#      cex = 0.7)
+
+text(-5, 0.18, 
+     labels = expression(paste("-|",t,"|")), 
+     cex = 2)
+text(5, 0.18, 
+     labels = expression(paste("|",t,"|")), 
+     cex = 2)
+
+```
+
+## The $p$-value for $H_0:\, \beta_1 = -2$
+
+$$t = \frac{-2.28 - (-2)}{0.48} = -0.54$$
+
+```{r echo=FALSE, error=FALSE, warning=FALSE, out.width = "70%"}
+# Plot the standard normal on the support [-6,6]
+t <- seq(-6, 6, 0.01)
+par(mar = c(4.1,4.1,0.1,4.1))
+plot(x = t, 
+     y = dnorm(t, 0, 1), 
+     type = "l", 
+     col = "blue", 
+     lwd = 3, 
+     yaxs = "i",
+     ylab = "Density",
+     xaxt="n",
+     xlab = "t-value",
+     ylim = c(0, 0.45) )
+
+tact <- -0.54
+
+axis(1, at = c(0, -1.96, 1.96, -tact, tact))
+
+# Shade the critical regions using polygon():
+
+#critical region in left tail
+
+polygon(x = c(-6, seq(-6, -0.54, 0.01), -0.54),
+        y = c(0, dnorm(seq(-6, -0.54, 0.01)), 0),
+        col = 'gray90')
+
+# critical region in right tail
+
+polygon(x = c(0.54, seq(0.54, 6, 0.01), 6),
+        y = c(0, dnorm(seq(0.54, 6, 0.01)), 0),
+        col = 'gray90')
+
+# Add arrows and texts indicating critical regions and the p-value
+# arrows(-3.5, 0.2, -2.5, 0.02, length = 0.1)
+# arrows(3.5, 0.2, 2.5, 0.02, length = 0.1)
+
+arrows(-5, 0.16, -0.54, 0, length = 0.1)
+arrows(5, 0.16, 0.54, 0, length = 0.1)
+
+# text(-3.5, 0.22, 
+#      labels = expression("0.025"~"="~over(alpha, 2)),
+#      cex = 0.7)
+# text(3.5, 0.22, 
+#      labels = expression("0.025"~"="~over(alpha, 2)),
+#      cex = 0.7)
+
+text(-5, 0.18, 
+     labels = expression(paste("-|",t,"|")), 
+     cex = 2)
+text(5, 0.18, 
+     labels = expression(paste("|",t,"|")), 
+     cex = 2)
+
+
+```
+
+
+## The $t$-test
+
+- Fix **significance level** $\alpha$ (e.g. $\alpha = 0.05$) and apply the rule:
+
+  <div class="box">
+  Reject $H_0$ if $p$-value $<\alpha$; otherwise, do not reject $H_0$, 
+  </div>
+  
+  or equivalently,
+  
+  <div class="box">
+  Reject $H_0$ if $|t| > z_{1-\alpha/2}$, where the **critical value** $z_{1-\alpha/2}$ is $(1-\alpha/2)\times 100$ percentile in $\mathcal{N}(0,1)$
+  </div>
+  
+- Note, for $\alpha = 0.05$, the critical value is $z_{0.975} = 1.96$ 
+
+## Significance levels and critical values
+
+```{r echo=FALSE, error=FALSE, warning=FALSE, out.width = "70%"}
+# Plot the standard normal on the support [-6,6]
+t <- seq(-6, 6, 0.01)
+par(mar = c(4.1,4.1,0.1,4.1))
+plot(x = t, 
+     y = dnorm(t, 0, 1), 
+     type = "l", 
+     col = "blue", 
+     lwd = 3, 
+     yaxs = "i",
+     ylab = "Density",
+     xaxt="n",
+     xlab = "t-value",
+     ylim = c(0, 0.45) )
+
+tact <- -0.54
+
+axis(1, at = c(0, -1.96, 1.96, -tact, tact,-4.75,4.75))
+
+# Shade the critical regions using polygon():
+
+#critical region in left tail
+
+polygon(x = c(-6, seq(-6, -1.96, 0.01), -1.96),
+        y = c(0, dnorm(seq(-6, -1.96, 0.01)), 0),
+        col = 'gray90')
+
+# critical region in right tail
+
+polygon(x = c(1.96, seq(1.96, 6, 0.01), 6),
+        y = c(0, dnorm(seq(1.96, 6, 0.01)), 0),
+        col = 'gray90')
+
+# Add arrows and texts indicating critical regions and the p-value
+arrows(-3.5, 0.25, -2.5, 0.02, length = 0.1)
+arrows(3.5, 0.25, 2.5, 0.02, length = 0.1)
+
+arrows(-5, 0.16, -0.54, 0, length = 0.1)
+arrows(5, 0.16, 0.54, 0, length = 0.1)
+
+arrows(-5, 0.16, -4.75, 0, length = 0.1)
+arrows(5, 0.16, 4.75, 0, length = 0.1)
+
+
+text(-3.5, 0.27,
+     labels = expression("0.025"~"="~over(alpha, 2)),
+     cex = 2)
+text(3.5, 0.27,
+     labels = expression("0.025"~"="~over(alpha, 2)),
+     cex = 2)
+
+text(-5, 0.18, 
+     labels = expression(paste("-|",t,"|")), 
+     cex = 2)
+text(5, 0.18, 
+     labels = expression(paste("|",t,"|")), 
+     cex = 2)
+
+
+```
+
+
+
+# Estimating the variance of $\hat{\beta}_1$
+
+## Hetero- and homoskedasticity 
+
+- To compute $t = \frac{\hat{\beta}_1-\beta_{1,0}}{\hat{\sigma}_{\hat{\beta}_1}}$ we need to know $\hat{\sigma}_{\hat{\beta}_1} = \sqrt{\hat{\sigma}_{\hat{\beta}_1}^2}$
+
+- The specific formula $\hat{\sigma}_{\hat{\beta}_1}^2$ depends on the conditional error variance $\mathrm{var}(u_i|X_i)$ in the population regression model
+
+- If $\mathrm{var}(u_i|X_i)$ does not depend on the regressor value $X_i$, we say the errors are **homoskedastic**
+
+- If $\mathrm{var}(u_i|X_i)$ is a function of the regressor value $X_i$, we say the errors are **heteroskedastic**
+
+## The value of a year of education
+
+$$AHE_i = \beta_0 + \beta_1 YoEd_i + u_i; \quad i=1,\ldots,n$$
+
+```{r echo=FALSE, error=FALSE, warning=FALSE}
+library(AER) # include Applied Econometrics with R library
+data(CPSSWEducation) # Load CPSSWEducation data
+lm2 <- lm(earnings ~ education, data = CPSSWEducation) # Fitted model in lm1
+# Scatter plot
+plot(CPSSWEducation$education,CPSSWEducation$earnings,
+     main = "March 2016 Current Population Survey (US)",
+     col = "blue",
+     xlab = "Years of education",
+     ylab = "Average hourly earnings (dollars)",
+     ylim = c(0, 100))
+abline(lm2,
+       lwd = 3,
+       col = "red")
+```
+
+<!-- ## The value of a year of education in R -->
+
+<!-- $$AHE_i = \beta_0 + \beta_1 YoEd_i + u_i; \quad i=1,\ldots,n$$ -->
+
+<!-- ```{r echo=TRUE, eval = FALSE, error=FALSE, warning=FALSE} -->
+<!-- library(AER) # include Applied Econometrics with R library -->
+<!-- data(CPSSWEducation) # Load CPSSWEducation data -->
+<!-- lm1 <- lm(earnings ~ education, data = CPSSWEducation) # Fitted model in lm1 -->
+<!-- # Scatter plot -->
+<!-- plot(CPSSWEducation$education,CPSSWEducation$earnings, -->
+<!--      main = "March 2016 Current Population Survey (US)", -->
+<!--      col = "blue", -->
+<!--      xlab = "Years of education", -->
+<!--      ylab = "Average hourly earnings (dollars)", -->
+<!--      ylim = c(0, 100)) -->
+<!-- abline(lm1, -->
+<!--        lwd = 3, -->
+<!--        col = "red") -->
+<!-- ``` -->
+
+## The residual value of a year of education
+
+$$\hat{u}_i = AHE_i - \hat{\beta}_0 - \hat{\beta}_1 YoEd_i; \quad i=1,\ldots,n$$
+
+```{r echo=FALSE, error=FALSE, warning=FALSE}
+# Scatter plot
+plot(CPSSWEducation$education,lm2$residuals,
+     main = "March 2016 Current Population Survey (US)",
+     col = "blue",
+     xlab = "Years of education",
+     ylab = "Residuals")
+```
+
+<!-- ## The residual value of a year of education in R -->
+
+<!-- ```{r echo=TRUE, eval = FALSE, error=FALSE, warning=FALSE} -->
+<!-- # Scatter plot -->
+<!-- plot(CPSSWEducation$education,lm1$residuals, -->
+<!--      main = "March 2016 Current Population Survey (US)", -->
+<!--      col = "blue", -->
+<!--      xlab = "Years of education", -->
+<!--      ylab = "Residuals") -->
+<!-- ``` -->
+
+<!-- ## The conditional residual variance -->
+
+<!-- ```{r echo=TRUE, eval = TRUE, error=FALSE, warning=FALSE, include=FALSE} -->
+
+<!-- # Conditional residual variance -->
+
+<!-- c(var(lm1$residuals[(CPSSWEducation$education <= 9)]), -->
+<!--   var(lm1$residuals[(CPSSWEducation$education == 9)]), -->
+<!--   var(lm1$residuals[(CPSSWEducation$education == 10)]), -->
+<!--   var(lm1$residuals[(CPSSWEducation$education == 11)]), -->
+<!--   var(lm1$residuals[(CPSSWEducation$education == 12)]), -->
+<!--   var(lm1$residuals[(CPSSWEducation$education == 13)]), -->
+<!--   var(lm1$residuals[(CPSSWEducation$education == 14)]), -->
+<!--   var(lm1$residuals[(CPSSWEducation$education == 16)]), -->
+<!--   var(lm1$residuals[(CPSSWEducation$education == 18)])) -->
+
+<!-- ``` -->
+<!-- $$\hat{u}_i = AHE_i - \hat{\beta}_0 - \hat{\beta}_1 YoEd_i; \quad i=1,\ldots,n$$ -->
+
+<!-- <br> -->
+
+<!-- | $YoEd_i$                         | $\leq$ 9| 10      | 11      | 12      | 13      | 14      | 16      | 18      | -->
+<!-- | -------------------------------- | -------:| -------:| -------:| -------:| -------:| -------:| -------:| -------:| -->
+<!-- | $\mathrm{var}(\hat{u}_i|YoEd_i)$ | 22.5    | 29.8    | 26.3    | 55.3    | 64.8    | 67.7    | 116.2   | 139.6   | -->
+
+<!-- ## The conditional residual variance in R -->
+
+<!-- ```{r echo=TRUE, eval = TRUE, error=FALSE, warning=FALSE} -->
+<!-- # Conditional residual variance -->
+<!-- var(lm1$residuals[(CPSSWEducation$education == 14)]) -->
+<!-- ``` -->
+<!-- ## Estimating the variance of $\hat{\beta}_1$ -->
+
+<!-- - **Homoskedastic errors** has $\mathrm{var}(u_i|X_i) = \sigma^2_u$; then, -->
+
+<!--   $$\hat{\sigma}^2_{\hat{\beta}_1} = \frac{1}{n}\times\frac{\frac{1}{n-2}\sum_{i=1}^n \hat{u}_i^2}{\frac{1}{n-1}\sum_{i=1}^n (X_i - \overline{X})^2}$$ -->
+
+<!-- - **Heteroskedastic errors**, where $\mathrm{var}(u_i|X_i)$ depends on $X_i$ is the general and empirically relevant case. -->
+
+<!--   $$\hat{\sigma}^2_{\hat{\beta}_1} = \frac{1}{n}\times\frac{\frac{1}{n-2}\sum_{i=1}^n (X_i - \overline{X})^2 \hat{u}_i^2}{\left[\frac{1}{n-1}\sum_{i=1}^n (X_i - \overline{X})^2\right]^2}$$ -->
+
+## Standard error of $\hat{\beta}_1$
+
+- **Homoskedasticity-only standard error** of $\hat{\beta}_1$:
+
+  $$\hat{\sigma}_{\hat{\beta}_1} = \sqrt{\hat{\sigma}^2_{\hat{\beta}_1}} = \sqrt{\frac{1}{n}\times\frac{\frac{1}{n-2}\sum_{i=1}^n \hat{u}_i^2}{\frac{1}{n-1}\sum_{i=1}^n (X_i - \overline{X})^2}}$$
+
+- **Heteroskedasticity robust standard error** of $\hat{\beta}_1$:
+
+  $$\hat{\sigma}_{\hat{\beta}_1} = \sqrt{\hat{\sigma}^2_{\hat{\beta}_1}} = \sqrt{\frac{1}{n}\times\frac{\frac{1}{n-2}\sum_{i=1}^n (X_i - \overline{X})^2 \hat{u}_i^2}{\left[\frac{1}{n-1}\sum_{i=1}^n (X_i - \overline{X})^2\right]^2}}$$
+
+## Heteroskedasticity robust standard errors
+
+- The heteroskedasticity robust standard error of $\hat{\beta}_1$ is valid also when errors are homoskedastic
+
+- The homoskedasticity-only standard error of $\hat{\beta}_1$ is valid *only* when errors are homoskedastic
+
+- You should **always** use heteroskedasticity robust standard errors in applications of regression analysis
+
+
+## Homoskedasticity-only standard errors in R
+
+```{r echo=TRUE, eval = TRUE, error=FALSE, warning=FALSE}
+# Earnings-education regression (lm2)
+# Regression output with homoskedastic-only SEs
+summary(lm2)
+```
+
+## Heteroskedasticity robust standard errors in R
+
+```{r echo=TRUE, eval = TRUE, error=FALSE, warning=FALSE}
+library(parameters) # include parameters library
+# Earnings-education regression (lm2)
+# Regression output with heteroskedastic robust SEs
+parameters(lm2, robust = TRUE, vcov_type = "HC1")
+```
+
+<!-- ## Homoskedasticity-only standard errors in R -->
+
+<!-- ```{r echo=TRUE, eval = TRUE, error=FALSE, warning=FALSE} -->
+<!-- # Score-STR regression (lm1) -->
+<!-- # Regression output with homoskedastic-only SEs -->
+<!-- summary(lm1) -->
+<!-- ``` -->
+
+<!-- ## The $p$-value for homoskedasticity-only SE -->
+
+<!-- $$H_0:\, \beta_1 = 0; \quad t = \frac{-2.28 - 0}{0.48} = -4.75$$ -->
+
+<!-- ```{r echo=FALSE, error=FALSE, warning=FALSE, out.width = "70%"} -->
+<!-- # Plot the standard normal on the support [-6,6] -->
+<!-- t <- seq(-6, 6, 0.01) -->
+<!-- par(mar = c(4.1,4.1,0.1,4.1)) -->
+<!-- plot(x = t,  -->
+<!--      y = dnorm(t, 0, 1),  -->
+<!--      type = "l",  -->
+<!--      col = "blue",  -->
+<!--      lwd = 3,  -->
+<!--      yaxs = "i", -->
+<!--      ylab = "Density", -->
+<!--      xaxt="n", -->
+<!--      xlab = "t-value", -->
+<!--      ylim = c(0, 0.45) ) -->
+
+<!-- tact <- -4.75 -->
+
+<!-- axis(1, at = c(0, -1.96, 1.96, -tact, tact)) -->
+
+<!-- # Shade the critical regions using polygon(): -->
+
+<!-- #critical region in left tail -->
+
+<!-- polygon(x = c(-6, seq(-6, -4.75, 0.01), -4.75), -->
+<!--         y = c(0, dnorm(seq(-6, -4.75, 0.01)), 0), -->
+<!--         col = 'red') -->
+
+<!-- # critical region in right tail -->
+
+<!-- polygon(x = c(4.75, seq(4.75, 6, 0.01), 6), -->
+<!--         y = c(0, dnorm(seq(4.75, 6, 0.01)), 0), -->
+<!--         col = 'red') -->
+
+<!-- # Add arrows and texts indicating critical regions and the p-value -->
+<!-- # arrows(-3.5, 0.2, -2.5, 0.02, length = 0.1) -->
+<!-- # arrows(3.5, 0.2, 2.5, 0.02, length = 0.1) -->
+
+<!-- arrows(-5, 0.16, -4.75, 0, length = 0.1) -->
+<!-- arrows(5, 0.16, 4.75, 0, length = 0.1) -->
+
+<!-- # text(-3.5, 0.22,  -->
+<!-- #      labels = expression("0.025"~"="~over(alpha, 2)), -->
+<!-- #      cex = 0.7) -->
+<!-- # text(3.5, 0.22,  -->
+<!-- #      labels = expression("0.025"~"="~over(alpha, 2)), -->
+<!-- #      cex = 0.7) -->
+
+<!-- text(-5, 0.18,  -->
+<!--      labels = expression(paste("-|",t,"|")),  -->
+<!--      cex = 2) -->
+<!-- text(5, 0.18,  -->
+<!--      labels = expression(paste("|",t,"|")),  -->
+<!--      cex = 2) -->
+
+<!-- ``` -->
+
+<!-- ## Heteroskedasticity robust standard errors in R -->
+
+<!-- ```{r echo=TRUE, eval = TRUE, error=FALSE, warning=FALSE} -->
+<!-- # Score-STR regression (lm1) -->
+<!-- # Regression output with heteroskedastic robust SEs -->
+<!-- parameters(lm1, robust = TRUE, vcov_type = "HC1") -->
+<!-- ``` -->
+
+
+<!-- ## The $p$-value for heteroskedasticity robust SE -->
+
+<!-- $$H_0:\, \beta_1 = 0; \quad t = \frac{-2.28 - 0}{0.52} = -4.39$$ -->
+
+<!-- ```{r echo=FALSE, error=FALSE, warning=FALSE, out.width = "70%"} -->
+<!-- # Plot the standard normal on the support [-6,6] -->
+<!-- t <- seq(-6, 6, 0.01) -->
+<!-- par(mar = c(4.1,4.1,0.1,4.1)) -->
+<!-- plot(x = t,  -->
+<!--      y = dnorm(t, 0, 1),  -->
+<!--      type = "l",  -->
+<!--      col = "blue",  -->
+<!--      lwd = 3,  -->
+<!--      yaxs = "i", -->
+<!--      ylab = "Density", -->
+<!--      xaxt="n", -->
+<!--      xlab = "t-value", -->
+<!--      ylim = c(0, 0.45) ) -->
+
+<!-- tact <- -4.39 -->
+
+<!-- axis(1, at = c(0, -1.96, 1.96, -tact, tact)) -->
+
+<!-- # Shade the critical regions using polygon(): -->
+
+<!-- #critical region in left tail -->
+
+<!-- polygon(x = c(-6, seq(-6, -4.39, 0.01), -4.39), -->
+<!--         y = c(0, dnorm(seq(-6, -4.39, 0.01)), 0), -->
+<!--         col = 'red') -->
+
+<!-- # critical region in right tail -->
+
+<!-- polygon(x = c(4.39, seq(4.39, 6, 0.01), 6), -->
+<!--         y = c(0, dnorm(seq(4.39, 6, 0.01)), 0), -->
+<!--         col = 'red') -->
+
+<!-- # Add arrows and texts indicating critical regions and the p-value -->
+<!-- # arrows(-3.5, 0.2, -2.5, 0.02, length = 0.1) -->
+<!-- # arrows(3.5, 0.2, 2.5, 0.02, length = 0.1) -->
+
+<!-- arrows(-5, 0.16, -4.39, 0, length = 0.1) -->
+<!-- arrows(5, 0.16, 4.39, 0, length = 0.1) -->
+
+<!-- # text(-3.5, 0.22,  -->
+<!-- #      labels = expression("0.025"~"="~over(alpha, 2)), -->
+<!-- #      cex = 0.7) -->
+<!-- # text(3.5, 0.22,  -->
+<!-- #      labels = expression("0.025"~"="~over(alpha, 2)), -->
+<!-- #      cex = 0.7) -->
+
+<!-- text(-5, 0.18,  -->
+<!--      labels = expression(paste("-|",t,"|")),  -->
+<!--      cex = 2) -->
+<!-- text(5, 0.18,  -->
+<!--      labels = expression(paste("|",t,"|")),  -->
+<!--      cex = 2) -->
+
+<!-- ``` -->
+
+# Confidence intervals
+
+## Many, many $t$-tests 
+
+- Thought experiment: test all possible hypothesized values for $\beta_1$ with 5% significance level, record rejections and non-rejections
+
+- Given $\hat{\beta}_1$ and $\hat{\sigma}_{\hat{\beta}_1}$, which hypothesized values $\beta_{1,0}$ for $\beta_1$ are not rejected?
+
+  $$\left| \frac{\hat{\beta}_1-\beta_{1,0}}{\hat{\sigma}_{\hat{\beta}_1}} \right| < 1.96$$
+
+## 95%-confidence interval
+
+- The outlined test procedure implies that we fail to reject $H_0: \beta_1 = \beta_{1,0}$ for $\beta_{1,0}$ in the following interval:
+
+  <div class="box">
+  $$\hat{\beta}_1-1.96 \times \hat{\sigma}_{\hat{\beta}_1}  \leq   \beta_{1,0} \leq \hat{\beta}_1+ 1.96\times \hat{\sigma}_{\hat{\beta}_1}$$
+  </div>
+
+- Estimate of range of $\beta_1$-values, called a **95%-confidence interval** for $\beta_1$ (abbreviated $CI_{\beta_1,0.95}$), all of which are consistent with the estimate $\hat{\beta}_1$ 
+
+## Test scores and class sizes
+
+$$Score_i = \beta_0 + \beta_1 STR_i + u_i; \quad i = 1,\ldots,n$$
+
+```{r echo=TRUE, error=FALSE, warning=FALSE}
+# Regression output with heteroskedastic robust SEs
+parameters(lm1, robust = TRUE, vcov_type = "HC1")
+```
+
+
+## 95% coverage probability
+
+<div class="box">
+$$CI_{\beta_1,0.95} = \left[\hat{\beta}_1-1.96 \times \hat{\sigma}_{\hat{\beta}_1}, \hat{\beta}_1+ 1.96 \times \hat{\sigma}_{\hat{\beta}_1}\right]$$
+</div>
+
+- Random sampling implies that the **confidence interval limits are random variables**
+
+- $CI_{\beta_1,0.95}$ is the set of $\beta_1$-values that are not rejected by a two-sided $t$-test with a 5% significance level
+
+- $CI_{\beta_1,0.95}$ is also a interval that has a 95% **coverage probability** of containing the true value $\beta_1$
+
+
+# Summary
+
+## Summary
+
+- Use a $t$-test to test null hypotheses about the parameter $\beta_1$ in the population regression model
+
+- Critical value for $t$-statistic for testing on a 5% significance level is 1.96: reject if $|t| > 1.96$ ($p$-value $< 0.05$)  
+
+- Always use the heteroskedasticity robust estimator of the variance of the OLS estimator $\hat{\beta}_1$
+
+- A 95%-CI is range of $\beta_1$-values that are not rejected by 2-sided $t$-test w/ 5% significance level
+
+- A 95%-CI covers true $\beta_1$ in 95/100 random samples
+
